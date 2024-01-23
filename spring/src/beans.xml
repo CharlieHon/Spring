@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
     <!--
     1. 配置monster对象/javabean
@@ -19,5 +19,58 @@
         <property name="monsterId" value="200"/>
         <property name="name" value="孙悟空"/>
         <property name="skill" value="七十二变"/>
+    </bean>
+
+    <bean class="com.charlie.spring.bean.Car" id="car01">
+        <!--解读
+        1. 当给某个bean对象设置属性的时候
+        2. 底层是使用对应的setter方法完成的，比如setName()
+        3. 如果没有这个方法，就会报错
+        -->
+        <property name="carId" value="100"/>
+        <property name="name" value="五菱宏光"/>
+        <property name="price" value="8.5"/>
+    </bean>
+
+    <!--配置Monster对象，并且指定构造器
+    1. constructor-arg 标签可以指定使用构造器的参数
+    2. index 表示构造器的第几个参数，从0开始计数
+    3. 除了可以通过index，还可以通过name/type来指定参数
+    4. 类的构造器，不会有完全相同类型和顺序的构造器，所以可以通过tyep来指定
+    -->
+    <bean class="com.charlie.spring.bean.Monster" id="monster03">
+        <constructor-arg value="200" index="0"/>                    <!--索引-->
+        <constructor-arg value="白骨精" name="name"/>                <!--字段名-->
+        <constructor-arg value="吸血" type="java.lang.String"/>      <!--类型-->
+    </bean>
+
+    <!--通过 p名称空间 来配置bean
+    1. 需要添加xmlns，xmlns:p="http://www.springframework.org/schema/p"
+    -->
+    <bean class="com.charlie.spring.bean.Monster" id="monster04"
+          p:monsterId="500"
+          p:name="红孩儿"
+          p:skill="三味真火"
+    />
+
+    <!--配置MemberDAOImpl对象-->
+    <bean class="com.charlie.spring.dao.MemberDAOImpl" id="memberDAO"/>
+    <!--配置MemberServiceImpl对象
+    1. ref="memberDAO" 表示 MemberServiceImpl对象属性memberDAO引用的对象的id=memberDAO的对象
+    2. 这里体现出Spring容器的依赖注入
+    3.注意在spring容器中，是作为一个整体来执行的，即如果引用到的一个bean对象，对配置的顺序没有要求，
+        上面memberDAO配置也可以在memberService的配置下面
+    4. 建议按顺序配置，在阅读时候比较方便
+    -->
+    <bean class="com.charlie.spring.service.MemberServiceImpl" id="memberService">
+        <property name="memberDAO" ref="memberDAO"/>
+    </bean>
+
+    <!--配置MemberServiceImpl对象-使用内部bean-->
+    <bean class="com.charlie.spring.service.MemberServiceImpl" id="memberService2">
+        <!--自己配置一个内部bean-->
+        <property name="memberDAO">
+            <bean class="com.charlie.spring.dao.MemberDAOImpl"/>
+        </property>
     </bean>
 </beans>
