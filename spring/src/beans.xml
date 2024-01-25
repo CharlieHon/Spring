@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util https://www.springframework.org/schema/util/spring-util.xsd">
     <!--
     1. 配置monster对象/javabean
     2. 在beans中可以配置多个bean
@@ -72,5 +73,192 @@
         <property name="memberDAO">
             <bean class="com.charlie.spring.dao.MemberDAOImpl"/>
         </property>
+    </bean>
+
+    <!--配置Mater对象-->
+    <bean class="com.charlie.spring.bean.Master" id="master">
+        <property name="name" value="太上老君"/>
+        <!--给list属性赋值-->
+        <property name="monsterList">
+            <list>
+                <!--引用-->
+                <ref bean="monster01"/>
+                <ref bean="monster02"/>
+                <!--内部bean，可以不设置id-->
+                <bean class="com.charlie.spring.bean.Monster">
+                    <property name="name" value="老鼠精"/>
+                    <property name="monsterId" value="100"/>
+                    <property name="skill" value="吃粮食"/>
+                </bean>
+            </list>
+        </property>
+        <!--给map属性赋值-->
+        <property name="monsterMap">
+            <map>
+                <entry>
+                    <key>
+                        <value>monster03</value>
+                    </key>
+                    <!--这里使用的是外部bean引用-->
+                    <ref bean="monster03"/>
+                </entry>
+                <entry>
+                    <key>
+                        <value>monster04</value>
+                    </key>
+                    <!--内部bean-->
+                    <bean class="com.charlie.spring.bean.Monster">
+                        <property name="name" value="青牛怪"/>
+                        <property name="monsterId" value="500"/>
+                        <property name="skill" value="乾坤圈"/>
+                    </bean>
+                </entry>
+            </map>
+        </property>
+        <!--给set属性赋值-->
+        <property name="monsterSet">
+            <set>
+                <ref bean="monster04"/>
+                <ref bean="monster01"/>
+                <bean class="com.charlie.spring.bean.Monster">
+                    <property name="name" value="金角大王"/>
+                    <property name="monsterId" value="600"/>
+                    <property name="skill" value="玉净瓶"/>
+                </bean>
+            </set>
+        </property>
+        <!--给数组属性赋值
+        array标签中使用value还是bean,ref 要根据业务决定
+        -->
+        <property name="monsterName">
+            <array>
+                <value>小旋风</value>
+                <value>奔波儿灞</value>
+                <value>九头虫</value>
+            </array>
+        </property>
+        <!--给properties属性赋值:结构K(String)-V(String)-->
+        <property name="pros">
+            <props>
+                <prop key="username">root</prop>
+                <prop key="password">123456</prop>
+                <prop key="ip">127.0.0.1</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!--定义一个util:list,并且指定id,可以达到数据复用-->
+    <util:list id="myBookList">
+        <value>三国演义</value>
+        <value>红楼梦</value>
+        <value>西游记</value>
+        <value>水浒传</value>
+    </util:list>
+    <!--配置BookStore对象-->
+    <bean class="com.charlie.spring.bean.BookStore" id="bookStore">
+        <property name="bookList" ref="myBookList"/>
+    </bean>
+
+    <!--属性级联赋值配置-->
+    <bean class="com.charlie.spring.bean.Dept" id="dept"/>
+    <bean class="com.charlie.spring.bean.Emp" id="emp">
+        <property name="name" value="jack"/>
+        <property name="dept" ref="dept"/>
+        <!--这里希望给dept的name属性指定值,级联属性赋值
+        dept.name底层是通过Dept的setName方法进行赋值的
+        -->
+        <property name="dept.name" value="Java开发部门"/>
+    </bean>
+
+    <!--配置monster对象,通过静态工厂获取
+    1. 通过静态工厂获取/配置bean
+    2. class是静态工厂类的全路径
+    3. factory-method 表示指定静态工厂类的哪个方法返回对象
+    4. constructor-arg value 指定要返回静态工厂的哪个对象,即factory-method的参数
+    -->
+    <bean id="my_monster01" class="com.charlie.spring.factory.MyStaticFactory" factory-method="getMonster">
+        <!--指定factory-method的参数-->
+        <constructor-arg value="monster02"/>
+    </bean>
+    <bean id="my_monster03" class="com.charlie.spring.factory.MyStaticFactory" factory-method="getMonster">
+        <!--指定factory-method的参数-->
+        <constructor-arg value="monster02"/>
+    </bean>
+
+    <bean class="com.charlie.spring.factory.MyInstanceFactory" id="myInstanceFactory01"/>
+    <bean class="com.charlie.spring.factory.MyInstanceFactory" id="myInstanceFactory02"/>
+    <!--配置monster对象,通过实例工厂
+    1. 需要先配置一个实例工厂对象
+    2. factory-bean 指定使用哪个实例工厂对象返回bean
+    3. factory-method 指定使用实例工厂的哪个方法返回bean
+    4. constructor-arg 指定要获取到实例工厂中的哪个monster
+    -->
+    <bean id="my_monster02" factory-bean="myInstanceFactory01" factory-method="getMonster">
+        <constructor-arg value="monster03"/>
+    </bean>
+    <bean id="my_monster04" factory-bean="myInstanceFactory02" factory-method="getMonster">
+        <constructor-arg value="monster03"/>
+    </bean>
+
+    <!--通过FactoryBean配置monster对象
+    1. 这里的class指定要使用的FactoryBean
+    2. key表示就是FactoryBean属性key
+    3. value就是要获取要获取的对象对应key
+    -->
+    <bean id="my_monster05" class="com.charlie.spring.factory.MyFactoryBean">
+        <property name="key" value="monster02"/>
+    </bean>
+
+    <!--配置Monster对象-->
+    <bean id="monster10" class="com.charlie.spring.bean.Monster">
+        <property name="name" value="蜈蚣精"/>
+        <property name="monsterId" value="10"/>
+        <property name="skill" value="蜇人~"/>
+    </bean>
+    <!--
+    1. 再配置一个Monster对象，属性和 monster10 对象一样
+    2. parent="monster10" 指定当前这个配置的对象的属性从 id="monster10"的对象来
+    -->
+    <bean id="monster11" class="com.charlie.spring.bean.Monster" parent="monster10"/>
+
+    <!--
+    1. 如果bean指定属性abstract=true，表示该bean对象，是用于被继承
+    2. 这个bean本身就不能被获取/实例化
+    -->
+    <bean id="monster12" class="com.charlie.spring.bean.Monster" abstract="true">
+        <property name="name" value="黑熊精"/>
+        <property name="monsterId" value="12"/>
+        <property name="skill" value="偷袈裟"/>
+    </bean>
+    <bean id="monster13" class="com.charlie.spring.bean.Monster" parent="monster12"/>
+
+    <!--测试bean对象的创建顺序
+    1. 默认按照顺序创建，先Student后Department
+    2. 当设置属性depends-on="department01"，会先创建id="department01"的Department对象
+    -->
+    <bean class="com.charlie.spring.bean.Student" id="student01" depends-on="department01"/>
+    <bean class="com.charlie.spring.bean.Department" id="department01"/>
+
+    <!--配置Cat对象
+    1. 在默认情况下，scope属性是单例(singleton)
+    2. 在ioc容器中，只会有一个bean对象
+    3. 当执行getBean时，返回的是同一个对象
+    4. 如果希望每次getBean返回一个新的Bean对象，则可以scope="prototype"
+    5. 如果bean的配置是 scope="singleton" lazy-init="true" ，这时ioc容器就不会提前创建该对象
+        而是在指定getBean方法时才会创建
+    -->
+    <bean class="com.charlie.spring.bean.Cat" id="cat" scope="prototype" lazy-init="false">
+        <property name="name" value="肥肥"/>
+        <property name="id" value="100"/>
+    </bean>
+
+    <!--配置House对象，演示整个bean的声明周期
+    1. init-method="init" 指定bean的初始化方法，在setter方法后执行
+    2. 方法的执行的时机由spring容器来控制
+    3. destroy-method="destroy" 指定bean的销毁方法，在ioc容器关闭的时候执行
+    -->
+    <bean class="com.charlie.spring.bean.House" id="house"
+          init-method="init" destroy-method="destroy">
+        <property name="name" value="美国大house"/>
     </bean>
 </beans>

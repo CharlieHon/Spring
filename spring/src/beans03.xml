@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+    <!--指定属性文件
+    1. 先把文件设修改成提示 All Problem
+    2. 提示错误，将光标放在context 输入alt+enter就会自动引入namespace
+    3. location="classpath:my.properties" 表示指定属性文件的位置
+    4. 提示：需要带上 classpath
+    5. 属性文件有中文，需要转为Unicode编码->使用工具
+    -->
+    <context:property-placeholder location="classpath:my.properties"/>
+    <!--配置monster对象
+    1. 通过属性文件给monster对象的属性赋值
+    2. 这时属性值通过 ${属性名}
+    3. 这里的属性名就是 my.properties 文件中的 k-v 的k
+    -->
+    <bean class="com.charlie.spring.bean.Monster" id="monster1000">
+        <property name="monsterId" value="${monsterId}"/>
+        <property name="name" value="${name}"/>
+        <property name="skill" value="${skill}"/>
+    </bean>
+
+    <!--配置OrderDAO-->
+    <bean class="com.charlie.spring.dao.OrderDAO" id="orderDAO"/>
+    <!--配置OrderService——自动装配
+    1. autowire="byType"表示在创建orderService时，通过类型的方式给对象属性 自动完成赋值/引用
+    2. 比如OrderService对象有属性 private OrderDAO orderDAO;
+    3. 就会在容器中去找有没有OrderDAO类型对象
+    4. 如果有，就会自动地装配，提示：如果是按照 byType 方式来装配，这个容器中，不能有两个及以上的该类型对象
+    5. 如果对象没有属性，则 autowire属性就没有必要设置
+    7. 如果设置的是 autowire="byName"，表示通过名字完成自动装配
+    8. 比如下面的配置 class="com.charlie.spring.service.OrderService" id="orderService" autowire="byName"
+        1) 先看 OrderService 属性 private OrderDAO orderDAO;
+        2) 再根据这个属性的 setXxx() 方法的 Xxx 来找对象id
+        3) public void setOrderDAO() 就会找id=orderDAO对象来进行自动装配
+    -->
+    <bean class="com.charlie.spring.service.OrderService" id="orderService"
+          autowire="byName"/>
+    <!--配置OrderAction-->
+    <bean class="com.charlie.spring.web.OrderAction" id="orderAction"
+          autowire="byName"/>
+</beans>

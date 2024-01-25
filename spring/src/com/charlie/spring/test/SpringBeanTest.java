@@ -1,15 +1,146 @@
 package com.charlie.spring.test;
 
-import com.charlie.spring.bean.Car;
-import com.charlie.spring.bean.Monster;
+import com.charlie.spring.bean.*;
 import com.charlie.spring.service.MemberServiceImpl;
+import com.charlie.spring.web.OrderAction;
 import org.junit.Test;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.File;
 
 public class SpringBeanTest {
+
+    @Test
+    public void setBeanBySpel() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans04.xml");
+        SpELBean spELBean = ioc.getBean("spELBean", SpELBean.class);
+        System.out.println("spELBean=" + spELBean);
+        /*
+        spELBean=SpELBean{name='新西方教育', monster=Monster{monsterId=100, name='黄风怪', skill='沙尘暴'},
+        monsterName='黄风怪', crySound='发出喵喵喵声音', bookName='《天龙八部》', result=111.8}
+         */
+    }
+
+    // 通过自动装配来设置属性
+    @Test
+    public void setBeanByAutowire() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans03.xml");
+        OrderAction orderAction = ioc.getBean("orderAction", OrderAction.class);
+        // 验证是否自动装配上
+        System.out.println(orderAction.getOrderService());
+        System.out.println(orderAction.getOrderService().getOrderDAO());
+    }
+
+    // 通过属性文件给bean属性赋值
+    @Test
+    public void setBeanByFile() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans03.xml");
+        Monster bean = ioc.getBean("monster1000", Monster.class);
+        System.out.println("bean=" + bean);
+    }
+
+    // 后置处理器
+    @Test
+    public void beanPostProcessor() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans02.xml");
+        House house = ioc.getBean("house", House.class);
+        System.out.println("使用house=" + house);
+        ((ConfigurableApplicationContext) ioc).close();
+    }
+
+    // 测试Bean声明周期
+    @Test
+    public void testBeanLife() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        // 关闭容器
+        ((ConfigurableApplicationContext) ioc).close();     // House destroy()...
+        System.out.println("OK~");
+    }
+
+    // 测试Scope
+    @Test
+    public void testBeanScope() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        Cat cat = ioc.getBean("cat", Cat.class);
+        Cat cat1 = ioc.getBean("cat", Cat.class);
+        Cat cat2 = ioc.getBean("cat", Cat.class);
+        System.out.println("cat=" + cat);
+        System.out.println("cat1=" + cat1);
+        System.out.println("cat2=" + cat2);
+        System.out.println("OK~");
+    }
+
+    @Test
+    public void testBeanByCreate() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        System.out.println("OK~");
+    }
+
+    // 通过继承来配置Bean
+    @Test
+    public void getBeanByExtends() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        Monster monster11 = ioc.getBean("monster11", Monster.class);
+        System.out.println("monster11=" + monster11);   // Monster{monsterId=10, name='蜈蚣精', skill='蜇人~'}
+
+        // 从 abstract=true 的bean继承的
+        Monster monster13 = ioc.getBean("monster13", Monster.class);
+        System.out.println("monster13=" + monster13);
+    }
+
+    // 通过FactoryBean获取Bean
+    @Test
+    public void getBeanByFactoryBean() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        Monster my_monster05 = ioc.getBean("my_monster05", Monster.class);
+        System.out.println("my_monster05=" + my_monster05); // Monster{monsterId=400, name='奔波儿灞', skill='把唐僧师徒除掉~'}
+    }
+
+    // 通过静态工厂类获取bean
+    @Test
+    public void getBeanByInstanceFactory() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        Monster my_monster02 = ioc.getBean("my_monster02", Monster.class);
+        Monster my_monster04 = ioc.getBean("my_monster04", Monster.class);
+        System.out.println(my_monster02 == my_monster04);       // false 不是一个实例工厂产生的bean对象
+        System.out.println("my_monster02=" + my_monster02);     // Monster{monsterId=300, name='牛魔王~', skill='芭蕉扇'}
+    }
+
+    // 通过静态工厂类获取bean
+    @Test
+    public void getBeanByStaticFactory() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        Monster my_monster01 = ioc.getBean("my_monster01", Monster.class);
+        Monster my_monster03 = ioc.getBean("my_monster03", Monster.class);
+        System.out.println(my_monster01 == my_monster03);       // true 由同一个静态工厂创建bean对象
+        System.out.println("my_monster01=" + my_monster01);     // Monster{monsterId=200, name='狐狸精', skill='美人计'}
+    }
+
+    // 给属性进行级联赋值
+    @Test
+    public void setProByRelation() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        Emp emp = ioc.getBean("emp", Emp.class);
+        System.out.println("emp=" + emp);   // emp=Emp{name='jack', dept=Dept{name='Java开发部门'}}
+    }
+
+    // 使用util:list名称空间给属性赋值
+    @Test
+    public void setBeanByUtil() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        BookStore bookStore = ioc.getBean("bookStore", BookStore.class);
+        System.out.println("bookStore=" + bookStore);
+    }
+
+    // 给集合数组属性进行赋值
+    @Test
+    public void setBeanByCollection() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans.xml");
+        Master master = ioc.getBean("master", Master.class);
+        System.out.println("master=" + master);
+    }
 
     @Test
     public void setBeanByProperty() {    // 通过设置内部bean设置属性

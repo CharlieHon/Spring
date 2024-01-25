@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--配置House对象-->
+    <bean class="com.charlie.spring.bean.House" id="house"
+          init-method="init"
+          destroy-method="destroy">
+        <property name="name" value="美国大House"/>
+    </bean>
+
+    <!--配置House对象-->
+    <bean class="com.charlie.spring.bean.House" id="house02"
+          init-method="init"
+          destroy-method="destroy">
+        <property name="name" value="苏州园林"/>
+    </bean>
+
+    <!--配置后置处理器对象
+    1. 当我们在beans02.xml 容器配置文件配置了 MyBeanPostProcessor
+    2. 这是后置处理器，就会作用在该容器创建的所有对象
+    3. 已经是针对所有对象编程->切面编程AOP
+    -->
+    <bean class="com.charlie.spring.bean.MyBeanPostProcessor" id="beanPostProcessor"/>
+</beans>

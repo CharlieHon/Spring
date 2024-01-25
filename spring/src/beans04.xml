@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean class="com.charlie.spring.bean.Monster" id="monster01">
+        <property name="monsterId" value="100"/>
+        <property name="name" value="黄风怪"/>
+        <property name="skill" value="沙尘暴"/>
+    </bean>
+    <!--spring el表达式使用
+    1. 通过spel给bean的属性赋值
+    -->
+    <bean class="com.charlie.spring.bean.SpELBean" id="spELBean">
+        <!--sp el 给字符串赋值-->
+        <property name="name" value="#{'新西方教育'}"/>
+        <!--sp el 引用其它bean-->
+        <property name="monster" value="#{monster01}"/>
+        <!--sp el 引用其它bean的属性-->
+        <property name="monsterName" value="#{monster01.name}"/>
+        <!--sp el 调用普通方法 赋值-->
+        <property name="crySound" value="#{spELBean.cry('喵喵喵')}"/>
+        <!--sp el 调用静态方法(返回值) 赋值-->
+        <property name="bookName" value="#{T(com.charlie.spring.bean.SpELBean).read('天龙八部')}"/>
+        <!--sp el 通过运算赋值-->
+        <property name="result" value="#{89*1.2+5}"/>
+    </bean>
+</beans>

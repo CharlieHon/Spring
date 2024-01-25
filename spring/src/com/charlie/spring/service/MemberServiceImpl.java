@@ -19,6 +19,7 @@ public class MemberServiceImpl {
     }
 
     public void setMemberDAO(MemberDAOImpl memberDAO) {
+        System.out.println("setMemberDAO方法...");
         this.memberDAO = memberDAO;
     }
 }
