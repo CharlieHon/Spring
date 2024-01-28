@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+    <!--配置容器要扫描的包
+    1. component-scan 要对指定包下的类进行扫描，并创建对象到容器
+    2. base-package 指定要扫描的包
+    3. 含义是当spring容器创建/初始化时，就会扫描 com.charlie.spring.component 包下
+        所有有注解 @Controller @Service @Repository @Component 类
+        将其实例化，生成对象，放入到ioc对象
+    4. resource-pattern="User*.class" 表示只扫描 com.charlie.spring.component 和它子包下以User开头的类
+    -->
+    <context:component-scan base-package="com.charlie.spring.component"/>
+
+
+    <!--需求：如果希望排除某个包/子包下的某种类型的注解，可以通过 exclude-filter 来指定
+    1. context:exclude-filter 指定要排除那些类
+    2. type="annotation" 指定排除方式 annotation 表示按照注解来排除
+    3. expression="org.springframework.stereotype.Service" 指定要排除的注解的全路径
+    -->
+    <!--<context:component-scan base-package="com.charlie.spring.component">-->
+    <!--    &lt;!&ndash;放在 context:component-scan 标签内&ndash;&gt;-->
+    <!--    <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>-->
+    <!--</context:component-scan>-->
+
+
+    <!--需求：如果希望按照自己的规则，来扫描包/子包下的某些注解，可以通过 include-filter
+    1. use-default-filters="false" 表示不适用默认的过滤机制/扫描规则
+    2. context:include-filter 表示要去扫描哪些类
+    3. expression="org.springframework.stereotype.Service" 指定要扫描的注解的全路径
+    -->
+    <!--<context:component-scan base-package="com.charlie.spring.component" use-default-filters="false">-->
+    <!--    <context:include-filter type="annotation" expression="org.springframework.stereotype.Service"/>-->
+    <!--    <context:include-filter type="annotation" expression="org.springframework.stereotype.Repository"/>-->
+    <!--</context:component-scan>-->
+</beans>

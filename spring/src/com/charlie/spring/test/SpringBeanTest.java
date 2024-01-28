@@ -1,6 +1,11 @@
 package com.charlie.spring.test;
 
 import com.charlie.spring.bean.*;
+import com.charlie.spring.component.MyComponent;
+import com.charlie.spring.component.UserAction;
+import com.charlie.spring.component.UserDAO;
+import com.charlie.spring.component.UserService;
+//import com.charlie.spring.component.t.Pig;
 import com.charlie.spring.service.MemberServiceImpl;
 import com.charlie.spring.web.OrderAction;
 import org.junit.Test;
@@ -11,6 +16,21 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import java.io.File;
 
 public class SpringBeanTest {
+
+    // 通过注解配置bean
+    @Test
+    public void setBeanByAnnotation() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans05.xml");
+        // 在默认情况下，注解表示的类创建对象后，在容器中的id为类名的首字母小写
+        UserDAO userDAO = ioc.getBean(UserDAO.class);
+        UserService userService = ioc.getBean(UserService.class);
+        UserAction userAction = ioc.getBean(UserAction.class);
+        MyComponent myComponent = ioc.getBean(MyComponent.class);
+        //Pig pig = ioc.getBean(Pig.class);   // component子包下的bean注解，也会被上如
+        System.out.println(userDAO);
+        //System.out.println("Pig=" + pig);
+        System.out.println("OK!");
+    }
 
     @Test
     public void setBeanBySpel() {

@@ -828,6 +828,351 @@ skill=\u95ef\u738b
 
 #### Spring EI表达式配置
 
+```java
+package com.charlie.spring.bean;
+
+public class SpELBean {
+    private String name;
+    private Monster monster;
+    private String monsterName;
+    private String crySound;
+    private String bookName;
+    private Double result;
+
+    public SpELBean() {
+    }
+
+    public String cry(String sound) {
+        return "发出" + sound + "声音";
+    }
+
+    public static String read(String bookName) {
+        return "《" + bookName + "》";
+    }
+
+    @Override
+    public String toString() {
+        return "SpELBean{" +
+                "name='" + name + '\'' +
+                ", monster=" + monster +
+                ", monsterName='" + monsterName + '\'' +
+                ", crySound='" + crySound + '\'' +
+                ", bookName='" + bookName + '\'' +
+                ", result=" + result +
+                '}';
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Monster getMonster() {
+        return monster;
+    }
+
+    public void setMonster(Monster monster) {
+        this.monster = monster;
+    }
+
+    public String getMonsterName() {
+        return monsterName;
+    }
+
+    public void setMonsterName(String monsterName) {
+        this.monsterName = monsterName;
+    }
+
+    public String getCrySound() {
+        return crySound;
+    }
+
+    public void setCrySound(String crySound) {
+        this.crySound = crySound;
+    }
+
+    public String getBookName() {
+        return bookName;
+    }
+
+    public void setBookName(String bookName) {
+        this.bookName = bookName;
+    }
+
+    public Double getResult() {
+        return result;
+    }
+
+    public void setResult(Double result) {
+        this.result = result;
+    }
+}
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean class="com.charlie.spring.bean.Monster" id="monster01">
+        <property name="monsterId" value="100"/>
+        <property name="name" value="黄风怪"/>
+        <property name="skill" value="沙尘暴"/>
+    </bean>
+    <!--spring el表达式使用
+    1. 通过spel给bean的属性赋值
+    -->
+    <bean class="com.charlie.spring.bean.SpELBean" id="spELBean">
+        <!--sp el 给字符串赋值-->
+        <property name="name" value="#{'新西方教育'}"/>
+        <!--sp el 引用其它bean-->
+        <property name="monster" value="#{monster01}"/>
+        <!--sp el 引用其它bean的属性-->
+        <property name="monsterName" value="#{monster01.name}"/>
+        <!--sp el 调用普通方法 赋值-->
+        <property name="crySound" value="#{spELBean.cry('喵喵喵')}"/>
+        <!--sp el 调用静态方法(返回值) 赋值-->
+        <property name="bookName" value="#{T(com.charlie.spring.bean.SpELBean).read('天龙八部')}"/>
+        <!--sp el 通过运算赋值-->
+        <property name="result" value="#{89*1.2+5}"/>
+    </bean>
+</beans>
+```
+
+### 基于注解配置bean
+
+- 基于注解的方式配置bean，主要是项目开发中的组件，比如 `Controller`, `Service`, 和 `DAO`
+- 组件注解的形式有
+  1. `@Component`表示当前注解标识的是一个组件
+  2. `@Controller`表示当前注解标识的是一个控制器，通常用于 `Servlet`
+  3. `@Service`表示当前注解标识的是一个处理业务逻辑的类，通常用于 `Service`类
+  4. `@Repository`表示当前注解标识的是一个持久化层的类，通常用于 `DAO`类
+
+#### 快速入门
+
+```java
+package com.charlie.spring.component;
+
+import org.springframework.stereotype.Repository;
+
+// 使用注解 @Repository 标识该类是一个持久化层的类/对象
+/*
+1. 标记注解后，类名首字母小写作为id的值(默认)
+2. 如果设置 value属性，则使用指定的 charlieUserDAO 作为userDAO对象的id
+ */
+@Repository(value = "charlieUserDAO")
+public class UserDAO {
+
+}
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+    <!--配置容器要扫描的包
+    1. component-scan 要对指定包下的类进行扫描，并创建对象到容器
+    2. base-package 指定要扫描的包
+    3. 含义是当spring容器创建/初始化时，就会扫描 com.charlie.spring.component 包下
+        所有有注解 @Controller @Service @Repository @Component 类
+        将其实例化，生成对象，放入到ioc对象
+    4. 在ioc容器中，配置的bean的默认id为类名首字母小写
+    -->
+    <context:component-scan base-package="com.charlie.spring.component"/>
+</beans>
+```
+
+#### 注意事项和细节说明
+
+1. 需要导入 `spring-aop-5.3.8.jar` 包
+2. 必须在Spring配置文件中指定**自动扫描的包**，IOC容器才能够检测当前项目中哪些类被标识了注解，注意到导入
+   `context`名称空间，`<context:component-scan base-package="com.charlie.spring.component"/`>，
+    可以使用通配符 `*` 来指定，比如 `com.charlie.spring.*` 表示
+3. Spring的IOC容器不能检测一个使用了 `@Controller` 注解的类到底是不是一个真正的控制器。注解的名称是用于程序员
+    自己识别当前标识的是什么组件。其它注解同理，即spring的IOC容器只要检查到注解就会生成对象，但是这个注解的含义spring
+   不会识别，注解是给程序员编程方便看的
+4. 默认情况下。标记注解后，类名首字母小写作为id的值。也可以使用注解的value属性指定id，并且value可以省略
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+    <!--配置容器要扫描的包
+    1. component-scan 要对指定包下的类进行扫描，并创建对象到容器
+    2. base-package 指定要扫描的包
+    3. 含义是当spring容器创建/初始化时，就会扫描 com.charlie.spring.component 包下
+        所有有注解 @Controller @Service @Repository @Component 类
+        将其实例化，生成对象，放入到ioc对象
+    4. resource-pattern="User*.class" 表示只扫描 com.charlie.spring.component 和它子包下以User开头的类
+    -->
+    <!--<context:component-scan base-package="com.charlie.spring.component" resource-pattern="User*.class"/>-->
 
 
+    <!--需求：如果希望排除某个包/子包下的某种类型的注解，可以通过 exclude-filter 来指定
+    1. context:exclude-filter 指定要排除那些类
+    2. type="annotation" 指定排除方式 annotation 表示按照注解来排除
+    3. expression="org.springframework.stereotype.Service" 指定要排除的注解的全路径
+    -->
+    <!--<context:component-scan base-package="com.charlie.spring.component">-->
+    <!--    &lt;!&ndash;放在 context:component-scan 标签内&ndash;&gt;-->
+    <!--    <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>-->
+    <!--</context:component-scan>-->
 
+
+    <!--需求：如果希望按照自己的规则，来扫描包/子包下的某些注解，可以通过 include-filter
+    1. use-default-filters="false" 表示不适用默认的过滤机制/扫描规则
+    2. context:include-filter 表示要去扫描哪些类
+    3. expression="org.springframework.stereotype.Service" 指定要扫描的注解的全路径
+    -->
+    <context:component-scan base-package="com.charlie.spring.component" use-default-filters="false">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+    </context:component-scan>
+</beans>
+```
+
+#### 手动开发-简单的spring基于注解配置的程序
+
+- ![思路分析](img_25.png)
+- ![要求](img_26.png)
+
+```java
+package com.charlie.spring.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * 1. @Target(ElementType.TYPE) 指定ComponentScn注解可以修饰Type程序元素
+ * 2. @Retention(RetentionPolicy.RUNTIME) 指定ComponentScan注解作用/保留范围
+ * 3. String value() default ""; 标识ComponentScan可以传入value属性
+ */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ComponentScan {
+    String value() default "";
+}
+```
+
+```java
+package com.charlie.spring.annotation;
+
+/**
+ * 这是一个配置类，作用类似原生spring的 beans.xml 容器配置文件
+ */
+@ComponentScan(value = "com.charlie.spring.component")
+public class CharlieSpringConfig {
+}
+```
+
+```java
+package com.charlie.spring.annotation;
+
+import com.charlie.spring.applicationcontext.CharlieApplicationContext;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.io.File;
+import java.net.URL;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * CharlieSpringApplicationContext 类的作用类似于Spring的原生容器
+ */
+public class CharlieSpringApplicationContext {
+    private Class configClass;
+    // ioc存放的就是通过反射创建的对象(基于注解方式)
+    private final ConcurrentHashMap<String, Object> ioc = new ConcurrentHashMap<>();
+
+    // 构造器
+    public CharlieSpringApplicationContext(Class configClass) {
+        this.configClass = configClass;
+        //System.out.println("this.configClass=" + this.configClass);
+        // 得到要扫描的包
+        // 1. 先得到CharlieSpringConfig的注解 @ComponentScan(value = "com.charlie.spring.component")
+        ComponentScan componentScan = (ComponentScan) this.configClass.getDeclaredAnnotation(ComponentScan.class);
+        // 2. 通过ComponentScan的value得到要扫描的包
+        String path = componentScan.value();
+        //System.out.println("要扫描的包=" + path);    // 要扫描的包=com.charlie.spring.component
+
+        // 得到要扫描的包下的所有资源(类.class)
+        // 1. 先得到类的加载器
+        ClassLoader classLoader = CharlieApplicationContext.class.getClassLoader();
+        // 2. 通过类的加载器获取到要扫描包的资源url
+        path = path.replace(".", "/"); // 将路径中的 . 替换为 /
+        URL resource = classLoader.getResource(path);   // "com/charlie/spring/component"
+        //System.out.println("URL resource=" + resource); // file:/E:/Spring/spring/out/production/spring/com/charlie/spring/component
+        // 3. 将要加载的资源(.class)路径下的文件进行遍历 => io
+        File file = new File(resource.getFile());
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            for (File f : files) {
+                //System.out.println(f.getAbsolutePath());
+                // E:\Spring\spring\out\production\spring\com\charlie\spring\component\UserService.class
+                // 获取到 com.charlie.spring.component.UserService
+                String fileAbsolutePath = f.getAbsolutePath();
+
+                // 这里只处理 .class 文件
+                if (fileAbsolutePath.endsWith(".class")) {
+                    // 1. 获取到类名
+                    String className = fileAbsolutePath.substring(fileAbsolutePath.lastIndexOf("\\") + 1, fileAbsolutePath.indexOf(".class"));
+                    //System.out.println("className=" + className);   // className=MyComponent
+                    // 2. 获取类的完整路径(全类名)
+                    // path.replace("/", ".") => com.charlie.spring.component
+                    String classFullName = path.replace("/", ".") + "." + className;
+                    //System.out.println("classFullName=" + classFullName);   // com.charlie.spring.component.UserService
+
+                    // 3. 判断该类是不是需要注入到容器中，就看该类是不是有注解 @Component @Service
+                    try {
+                        // 这时，就得到了该类的 Class 对象
+                        // 1. 也可以使用 Class.forName(classFullName) 反射加载得到类对象
+                        // 2. 区别在于 1) 会调用该类的静态方法，下面方法不会(轻量)
+                        // 3. aClass.isAnnotationPresent(Component.class) 判断该类是否有 @Component 注解
+                        Class<?> aClass = classLoader.loadClass(classFullName);
+                        if (aClass.isAnnotationPresent(Component.class) || aClass.isAnnotationPresent(Controller.class)
+                                || aClass.isAnnotationPresent(Service.class) || aClass.isAnnotationPresent(Repository.class)) {
+
+                            // 通过注解获取value值，即自定义id。以Component为例
+                            if (aClass.isAnnotationPresent(Component.class)) {
+                                // 获取到该注解
+                                Component component = aClass.getDeclaredAnnotation(Component.class);
+                                String id = component.value();
+                                if (!id.isEmpty()) {    // id非空 ""
+                                    className = id;     // 则将key设置为id值
+                                }
+                            }
+
+                            // 这时就可以反射对象，并放入到容器中
+                            Class<?> clazz = Class.forName(classFullName);
+                            Object instance = clazz.newInstance();
+                            // 默认情况下，类名首字母小写作为id
+                            ioc.put(StringUtils.uncapitalize(className), instance);
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+
+                }
+            }
+        }
+    }
+
+    // 编写方法，返回容器对象
+    public Object getBean(String name) {
+        return ioc.get(name);
+    }
+}
+```
