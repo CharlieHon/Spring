@@ -1227,3 +1227,183 @@ public class UserAction {
 }
 ```
 
+#### 泛型依赖注入
+
+1. 为了更好的管理有继承和相互依赖的bean的自动装配，spring还提供了基于泛型依赖的注入机制
+2. 在继承关系复杂的情况下，泛型依赖注入就会有很大的优越性
+3. ![img_27.png](img_27.png)
+
+```java
+package com.charlie.spring.depinjection;
+
+// 自定义泛型类
+public abstract class BaseDAO<T> {
+    public abstract void save();
+}
+```
+
+```java
+package com.charlie.spring.depinjection;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+// 自定义泛型类
+public class BaseService<T> {
+    @Autowired
+    private BaseDAO<T> baseDAO;
+
+    public void save() {
+        baseDAO.save();
+    }
+}
+```
+
+```java
+package com.charlie.spring.depinjection;
+
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class BookDAO extends BaseDAO<Book> {
+    @Override
+    public void save() {
+        System.out.println("BookDAO 的save() ...");
+    }
+}
+```
+
+```java
+package com.charlie.spring.depinjection;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class BookService extends BaseService<Book> {
+
+}
+```
+
+## AOP
+
+- ![需求分析](img_28.png)
+- 传统方法：在各个方法的前/后执行过程输出日志提示信息
+  - ![传统方法](img_29.png)
+- 动态代理方法：在调用方法时，使用反射机制，根据方法去决定调用哪个对象方法
+
+```java
+package com.charlie.spring.aop.proxy2;
+
+// 接口
+public interface Vehicle {
+    public void run();
+    public String fly(int height);
+}
+```
+
+```java
+package com.charlie.spring.aop.proxy2;
+
+public class Car implements Vehicle {
+    @Override
+    public void run() {
+        //System.out.println("交通工具开始运行了....");
+        System.out.println("小汽车在公路 running...");
+        //System.out.println("交通停止运行....");
+    }
+
+    @Override
+    public String fly(int height) {
+        System.out.println("小汽车可以飞翔，高度=" + height);
+        return "小汽车可以飞翔，高度=" + height;
+    }
+}
+```
+
+```java
+package com.charlie.spring.aop.proxy2;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+
+// VehicleProxyProvider 该类可以返回一个代理对象
+public class VehicleProxyProvider {
+    // 定义一个属性，target_vehicle表示真正要执行的对象，该对象实现了Vehicle接口
+    private Vehicle target_vehicle;
+
+    public VehicleProxyProvider(Vehicle target_vehicle) {
+        this.target_vehicle = target_vehicle;
+    }
+
+    // 编写一个方法，可以返回一个代理对象
+    // 1. 这个方法非常重要，较难理解
+    public Vehicle getProxy() {
+        /*
+        public static Object newProxyInstance(ClassLoader loader,
+                                      Class<?>[] interfaces,
+                                      InvocationHandler h)
+
+         1. Proxy.newProxyInstance() 方法可以返回一个代理对象
+         2. ClassLoader loader：类加载器
+         3. Class<?>[] interfaces：将来要代理对象的接口信息
+         4. InvocationHandler h：调用处理器/对象，有一个非常重要的方法invoke
+         */
+
+        // 1) 得到类加载器
+        ClassLoader classLoader = target_vehicle.getClass().getClassLoader();
+        // 2) 得到要代理的对象/被执行对象的接口信息(其实现的接口有哪些)，底层是通过接口来完成
+        Class<?>[] interfaces = target_vehicle.getClass().getInterfaces();
+
+        // 3) 创建InvocationHandler对象
+        // 因为InvocationHandler是接口，所以可以通过匿名对象方式来创建该对象
+        /**
+         * public interface InvocationHandler {
+         *      public Object invoke(Object proxy, Method method, Object[] args)
+         *         throws Throwable;
+         * }
+         * invoke方法是将来执行target_vehicle的方法时，会调用到的
+         */
+        InvocationHandler invocationHandler = new InvocationHandler() {
+            /**
+             * invoke方法是将来执行target_vehicle的方法时，会调用到
+             * proxy 表示代理对象
+             * method 就是通过代理对象调用方法时的那个方法 如：代理对象.run()
+             * args：表示调用 代理对象.run(xx) 传入的参数xx
+             * @return 表示代理对象.run(xx) 执行后的结果
+             */
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                System.out.println("交通工具开始运行了....");
+                // 这里通过反射调用 target_vehicle 的 method 方法
+                // method是：public abstract void com.charlie.spring.aop.proxy2.Vehicle.run()
+                // target_vehicle是：Ship对象
+                // args 是null
+                Object result = method.invoke(target_vehicle, args);
+                System.out.println("交通停止运行....");
+                return result;
+            }
+        };
+
+        Vehicle proxy = (Vehicle) Proxy.newProxyInstance(classLoader, interfaces, invocationHandler);
+        return proxy;
+    }
+}
+```
+
+缺点：
+1. 代码耦合性高，前/后置处理可以提出来，作为切片类的动态方法
+2. `VehicleProxyProvider`类只能给实现了接口 `Vehicle` 的类提供代理
+
+### AOP基本介绍
+
+- AOP(aspect oriented programming)，面向切面编程
+  - ![img_30.png](img_30.png)
+  - ![img_31.png](img_31.png)
+- AOP实现方式
+  1. 基于动态代理的方式(内置aop实现)
+  2. 使用框架 `aspectj` 来实现
+- 需要引入核心的 `aspect` 包
+  1. ![img_32.png](img_32.png)
+  2. ![img_33.png](img_33.png)
+
+
