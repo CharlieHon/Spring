@@ -1406,4 +1406,138 @@ public class VehicleProxyProvider {
   1. ![img_32.png](img_32.png)
   2. ![img_33.png](img_33.png)
 
+### AOP快速入门
 
+- ![引入新的包](img_34.png)
+
+```java
+package com.charlie.spring.aop.aspectj;
+
+import org.springframework.stereotype.Component;
+
+@Component  // 当Spring容器启动时，将APo注入到容器
+public class APo implements SmartAnimal {
+    @Override
+    public int getSum(int num1, int num2) {
+        int result = num1 + num2;
+        //result = 9 / 0;
+        System.out.println("方法内部打印 result=" + result);
+        return result;
+    }
+
+    @Override
+    public int getSub(int num1, int num2) {
+        int result = num1 - num2;
+        System.out.println("方法内部打印 result=" + result);
+        return result;
+    }
+}
+```
+
+```java
+package com.charlie.spring.aop.aspectj;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.Signature;
+import org.aspectj.lang.annotation.*;
+import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
+
+// 切面类，类似于之前写的MyProxyProvider，但是功能强大很多
+@Component  // 会注入到IOC容器
+@Aspect     // 标识是一个切面类，底层有切面编程支撑(动态代理+反射+动态绑定)
+public class SmartAnimalAspect {
+    // 希望将f1方法切入到APo-getSum前执行(前置通知)
+    @Before(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))")
+    /**
+     * 1. Before 表示是前置通知，即在目标对象执行方法前执行
+     * 2. value 指定切入到哪个类(APo)的哪个方法(getSum)，带形参列表是因为可能同名方法(重载)
+     *      形式：访问修饰符 返回类型 全类名.方法名(形参列表)
+     * 3. f1方法可以理解成就是一个切入方法，方法名可以自定义，如 showBeginLog
+     * 4. JoinPoint 表示在底层执行时，由Aspectj切面框架给该切入方法传入 joinPoint对象
+     *      通过该方法，可以获取到相关信息
+     */
+    public void f1(JoinPoint joinPoint) {
+        // 通过链接点对象joinPoint可以获取方法签名，即com.charlie.spring.aop.aspectj.APo.getSum(int, int)
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类f1()-方法执行前-日志-方法名-" + signature.getName() + "-参数-" +
+                Arrays.toString(joinPoint.getArgs()));
+    }
+
+    // 返回通知，即把f2()方法切入到目标对象方法正常执行完毕后的地方
+    @AfterReturning(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))") // 返回通知
+    public void f2(JoinPoint joinPoint) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类f2()-方法执行正常结束-日志-方法名-" + signature.getName());
+    }
+
+    // 异常通知：即把f3方法切入到目标对象方法执行发生异常的catch块
+    @AfterThrowing(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))") // 返回通知
+    public void f3(JoinPoint joinPoint) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类f3()-方法执行异常-日志-方法名-" + signature.getName());
+    }
+
+    // 最终通知：把f4方法切入到目标方法执行后，不管是否发生异常，都要执行 finally{}块
+    @After(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))") // 返回通知
+    public void f4(JoinPoint joinPoint) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类f4()-方法执行异常-日志-方法名-" + signature.getName());
+    }
+}
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+    <context:component-scan base-package="com.charlie.spring.aop.aspectj"/>
+    <!--
+    1. 开启基于注解的AOP功能
+    2. 不加的话注解类上的 @Aspect 注解不会生效
+    3. 切入的方法也不会执行-->
+    <aop:aspectj-autoproxy/>
+</beans>
+```
+
+```java
+package com.charlie.spring.aop.aspectj;
+
+import org.junit.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+public class AopAspectjTest {
+    @Test
+    public void aPoTestByProxy() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans08.xml");
+        // 这里需要通过接口类型来获取到注入的APo对象，即代理对象
+        /*
+        因为底层是通过接口注入的
+        SmartAnimal proxy = (SmartAnimal) Proxy.newProxyInstance(classLoader, interfaces, invocationHandler)
+         */
+        SmartAnimal smartAnimal = ioc.getBean(SmartAnimal.class);
+        System.out.println("smartAnimal类型=" + smartAnimal.getClass());  // class com.sun.proxy.$Proxy13
+        smartAnimal.getSum(10, 2);
+    }
+}
+```
+
+#### 快速入门注意事项
+
+1. 关于切面类方法命名可以自己规范一下，比如 `showBeginLog()`, `showSuccessEndLog()`, `showExceptionLog()`, `showFinallyEndLog()`
+2. 切入表达式的更多配置，比如使用模糊配置，如 `@Before(value = "excecution(* com.charlie.spring.aop.aspectj.SmartAnimal.*(..))")`
+   表示 该类的下所有方法(所有返回类型，所有方法名，所有类型形参)
+3. 表示所有访问权限，所有包下的所有类的所有方法，都会被执行该前置通知方法，可以是 `@Before(value = "execution(* *.*(..))")`
+4. 当Spring容器开启了 `<aop:aspectj-autoproxy/>` 时，才会开启基于Aspectj的自动代理模式
+5. **获取注入的对象时，需要以接口的类型来获取，因为注入的对象.getClass()已经是代理类型**了
+6. 也可以通过id来获取著需要的对象，但是也要转成接口类型
+
+```
+SmartAnimal smartAnimal = (SmartAnimal) ioc.getBean("APo");
+//SmartAnimal smartAnimal = ioc.getBean(SmartAnimal.class);
+```
