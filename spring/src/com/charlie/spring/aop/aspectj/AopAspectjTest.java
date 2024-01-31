@@ -19,7 +19,7 @@ public class AopAspectjTest {
         System.out.println("smartAnimal类型=" + smartAnimal.getClass());  // class com.sun.proxy.$Proxy13
         smartAnimal.getSum(10, 2);
         System.out.println("================");
-        smartAnimal.getSub(10, 2);
+        //smartAnimal.getSub(10, 2);
     }
 
     @Test
@@ -30,5 +30,21 @@ public class AopAspectjTest {
         System.out.println("=============");
         UsbInterface camera = (UsbInterface) ioc.getBean("camera");
         camera.work();
+    }
+
+    @Test
+    public void test1() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans08.xml");
+        Car car = ioc.getBean(Car.class);
+        // car仍然是代理对象 class com.charlie.spring.aop.aspectj.Car$$EnhancerBySpringCGLIB$$f1438f3e
+        System.out.println("Car的运行类型=" + car.getClass());
+        car.run();
+    }
+
+    @Test
+    public void testDoAround() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("beans08.xml");
+        SmartAnimal smartAnimal = ioc.getBean(SmartAnimal.class);
+        smartAnimal.getSum(10, 2);
     }
 }

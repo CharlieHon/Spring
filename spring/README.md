@@ -1541,3 +1541,285 @@ public class AopAspectjTest {
 SmartAnimal smartAnimal = (SmartAnimal) ioc.getBean("APo");
 //SmartAnimal smartAnimal = ioc.getBean(SmartAnimal.class);
 ```
+
+### AOP-切入表达式
+
+1. 切入表达式：通过**表达式的方式**定位**一个或多个**具体的连接点(切入方法)。
+2. 语法细节：
+   1) 切入点表达式的语法格式：`execution([权限修饰符] [返回值类型] [简单类名/全类名].[方法名](参数列表))`
+   2) 表达式 `execution(* com.charlie.spring.aop.aspectj.UsbInterface.*(..))`
+      1. 作用在 `UsbInterface` **接口**中声明的所有方法
+      2. 第一个 `*` 代表任意修饰符及任意返回值
+      3. 第二个 `*` 代表任意方法
+      4. `..` 匹配任意数量、任意类型的参数
+      5. **若目标类、接口与该切面类在同一个包中，则可以省略包名而使用简单类名**
+      6. ![img_35.png](img_35.png)
+
+| ![img_36.png](img_36.png) | ![img_37.png](img_37.png) |
+|---------------------------|---------------------------|
+| ![img_38.png](img_38.png) | ![img_39.png](img_39.png) |
+
+#### 注意事项和细节
+
+1. 切面表达式也可以指向类(实现了接口)的方法，这时切入表达式会对该类/对象生效
+2. **切入表达式也可以指向接口的方法，这时切入表达式会对实现了接口的类/对象生效**
+3. 切入表达式也可以**对没有实现接口的类，进行切入**
+
+```java
+package com.charlie.spring.aop.aspectj;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class Car {
+    public void run() {
+        System.out.println("小汽车在running...");
+    }
+}
+
+/* 切面类-对没有实现接口的类的方法进行切入
+@Before(value = "execution(public void Car.run())")
+public void ok1(JoinPoint joinPoint) {
+    Signature signature = joinPoint.getSignature();
+    System.out.println("切面类-ok1方法-" + signature.getName());
+}
+ */
+
+/* 测试类
+ApplicationContext ioc = new ClassPathXmlApplicationContext("beans08.xml");
+// 这里需要传入 类对象
+Car car = ioc.getBean(Car.class);
+// car仍然是代理对象 class com.charlie.spring.aop.aspectj.Car$$EnhancerBySpringCGLIB$$f1438f3e
+System.out.println("Car的运行类型=" + car.getClass());
+car.run();
+ */
+```
+
+- [动态代理jdk的Proxy与Spring的CGLib](https://www.cnblogs.com/threeAgePie/p/15832586.html)
+
+> 1. 动态代理：在不改变原有代码的情况下进行对象功能增强，使用代理对象代替原来的对象完成功能，进而达到拓展功能的目的
+> 2. JDK Proxy动态代理面向接口的动态代理
+>    - ![img_40.png](img_40.png)
+> 3. CGlib动态代理面向父类
+>    - ![img_41.png](img_41.png)
+> 4. 两个动态代理的区别
+>    1) JDK动态代理是面向**接口**的，只能**增强实现类中接口中存在的方法**；CGlib是面向**父类**的，可以增强**父类的所有方法**
+>    2) JDK得到的对象是**JDK代理对象实例**，而CGlib得到的对象是**被代理对象的子类**
+
+### AOP-JoinPoint
+
+```
+@After(value = "execution(public void Car.run())")
+public void ok2(JoinPoint joinPoint) {  // AOP-JoinPoint
+    // 获取目标方法名：run
+    String name = joinPoint.getSignature().getName();
+    // 获取目标方法所属类的类名：com.charlie.spring.aop.aspectj.Car
+    String declaringTypeName = joinPoint.getSignature().getDeclaringTypeName();
+    // 获取目标方法所属类的简单类名：Car
+    String simpleName = joinPoint.getSignature().getDeclaringType().getSimpleName();
+    // 获取目标方法声明类型(public(1), private protected)，以int形式返回
+    int modifiers = joinPoint.getSignature().getModifiers();
+    // 获取传入目标方法的参数，返回一个数组
+    Object[] args = joinPoint.getArgs();
+    // 获取被代理的对象：Car@2772
+    Object target = joinPoint.getTarget();
+    // 获取代理对象自己：com.charlie.spring.aop.aspectj.Car@a8e6492
+    Object aThis = joinPoint.getThis();
+    System.out.println("ok2~");
+}
+```
+
+### AOP-返回通知获取结果
+
+| ![img_43.png](img_43.png) | ![img_42.png](img_42.png) |
+|---------------------------|---------------------------|
+
+```
+// 返回通知，即把showSuccessEndLog()方法切入到目标对象方法正常执行完毕后的地方
+// 1. 如果希望目标方法(getSum)执行结果返回给切入方法(showSuccessEndLog)
+// 2. 可以在 @AfterReturning 增加属性，returning="res"
+// 3. 同时在切入方法增加参数 Object res
+// 4. 注意：return="res" 和 Object res 参数名要保持一致
+@AfterReturning(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))",
+        returning = "res") // 返回通知
+public void showSuccessEndLog(JoinPoint joinPoint, Object res) {
+    Signature signature = joinPoint.getSignature();
+    System.out.println("切面类showSuccessEndLog()-方法执行正常结束-日志-方法名-" + signature.getName()
+            + "-返回结果=" + res);
+}
+```
+
+### AOP-异常通知中获取异常
+
+```
+// 异常通知：即把showExceptionLog方法切入到目标对象方法执行发生异常的catch块
+//@AfterThrowing(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))",
+//        throwing = "throwable")
+@AfterThrowing(value = "myPointCut()", throwing = "throwable")
+public void showExceptionLog(JoinPoint joinPoint, Throwable throwable) {
+    Signature signature = joinPoint.getSignature();
+    System.out.println("切面类showExceptionLog()-方法执行异常-日志-方法名-" + signature.getName() + "-异常信息=" + throwable);
+}
+```
+
+### AOP-环绕通知
+
+```java
+package com.charlie.spring.aop.aspectj;
+
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
+import java.util.List;
+
+// 演示环绕通知的时候，需要注释掉之前的切面类的注解，不然会切入两个方法
+@Component  // 会注入到IOC容器
+@Aspect     // 标识是一个切面类，底层有切面编程支撑(动态代理+反射+动态绑定)
+public class SmartAnimalAspect2 {
+    // 演示环绕通知使用
+    // 1. @Around 表示这是一个环绕通知，可以完成其它四个通知的功能(前置、返回、异常、最终/后置)
+    // 2. value = "" 切入表达式
+    // 3. doAround 表示要切入的方法，调用的结构：try-catch-finally
+    @Around(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))")
+    public Object doAround(ProceedingJoinPoint joinPoint) {
+        Object result = null;
+        String methodName = joinPoint.getSignature().getName();
+        try {
+            // 1. 相当于前置通知完成的事情
+            Object[] args = joinPoint.getArgs();
+            List<Object> argList = Arrays.asList(args);
+            System.out.println("AOP环绕通知-" + methodName + "-方法开始-参数有：" + argList);
+            // 在环绕通知中，一定要调用 joinPoint.proceed() 求执行目标方法
+            result = joinPoint.proceed(args);
+            // 2. 相当于返回通知完成的事情
+            System.out.println("AOP环绕通知-" + methodName + "-方法结束-执行结果：" + result);
+        } catch (Throwable throwable) {
+            // 3. 相当于异常通知要完成的事情
+            System.out.println("AOP环绕通知-" + methodName + "-方法抛出异常-异常对象：" + throwable.getClass());
+        } finally {
+            // 4. 相当于最终通知完成的事情
+            System.out.println("AOP环绕通知-" + methodName + "-方法最终结束...");
+        }
+        return result;
+    }
+}
+```
+
+### AOP-切入点表达式重用
+
+- 为了统一管理切入点表达式，可以使用切入点表达式重用技术
+
+```java
+package com.charlie.spring.aop.aspectj;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.Signature;
+import org.aspectj.lang.annotation.*;
+import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
+
+// 切面类，类似于之前写的MyProxyProvider，但是功能强大很多
+@Component  // 会注入到IOC容器
+@Aspect     // 标识是一个切面类，底层有切面编程支撑(动态代理+反射+动态绑定)
+public class SmartAnimalAspect {
+
+    // 定义一个切入点，在后面使用时可以直接引用，提高了复用性
+    @Pointcut(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))")
+    public void myPointCut() {}
+
+    // 希望将showBeginLog方法切入到APo-getSum前执行(前置通知)
+    //@Before(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))")
+    /**
+     * 1. Before 表示是前置通知，即在目标对象执行方法前执行
+     * 2. value 指定切入到哪个类(APo)的哪个方法(getSum)，带形参列表是因为可能同名方法(重载)
+     *      形式：访问修饰符 返回类型 全类名.方法名(形参列表)
+     * 3. showBeginLog方法可以理解成就是一个切入方法，方法名可以自定义，如 showBeginLog
+     * 4. JoinPoint 表示在底层执行时，由Aspectj切面框架给该切入方法传入 joinPoint对象
+     *      通过该方法，可以获取到相关信息
+     */
+    // 这里使用一个定义好的切入点
+    @Before(value = "myPointCut()")
+    public void showBeginLog(JoinPoint joinPoint) {
+        // 通过链接点对象joinPoint可以获取方法签名，即com.charlie.spring.aop.aspectj.APo.getSum(int, int)
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类showBeginLog()[使用切入点表达式重用]-方法执行前-日志-方法名-" + signature.getName() + "-参数-" +
+                Arrays.toString(joinPoint.getArgs()));
+    }
+
+    // 返回通知，即把showSuccessEndLog()方法切入到目标对象方法正常执行完毕后的地方
+    // 1. 如果希望目标方法(getSum)执行结果返回给切入方法(showSuccessEndLog)
+    // 2. 可以在 @AfterReturning 增加属性，returning="res"
+    // 3. 同时在切入方法增加参数 Object res
+    // 4. 注意：return="res" 和 Object res 参数名要保持一致
+    //@AfterReturning(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))",
+    //        returning = "res") // 返回通知
+    @AfterReturning(value = "myPointCut()", returning = "res")
+    public void showSuccessEndLog(JoinPoint joinPoint, Object res) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类showSuccessEndLog()-方法执行正常结束-日志-方法名-" + signature.getName()
+                + "-返回结果=" + res);
+    }
+
+    // 异常通知：即把showExceptionLog方法切入到目标对象方法执行发生异常的catch块
+    //@AfterThrowing(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))",
+    //        throwing = "throwable")
+    @AfterThrowing(value = "myPointCut()", throwing = "throwable")
+    public void showExceptionLog(JoinPoint joinPoint, Throwable throwable) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类showExceptionLog()-方法执行异常-日志-方法名-" + signature.getName() + "-异常信息=" + throwable);
+    }
+
+    // 最终通知：把showFinallyEndLog方法切入到目标方法执行后，不管是否发生异常，都要执行 finally{}块
+    //@After(value = "execution(public int com.charlie.spring.aop.aspectj.APo.getSum(int, int))") // 返回通知
+    @After(value = "myPointCut()")
+    public void showFinallyEndLog(JoinPoint joinPoint) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类showFinallyEndLog()-方法执行异常-日志-方法名-" + signature.getName());
+    }
+
+    // 新的前置通知
+    //@Before(value = "execution(public void com.charlie.spring.aop.aspectj.Camera.work()) || execution(public void com.charlie.spring.aop.aspectj.Phone.work())")
+    //public void hi(JoinPoint joinPoint) {
+    //    Signature signature = joinPoint.getSignature();
+    //    System.out.println("(SmartAnimalAspect-前置通知-Phone&Camera-)" + signature.getName());
+    //}
+    @Before(value = "execution(public void com.charlie.spring.aop.aspectj.UsbInterface.work())")
+    public void hi(JoinPoint joinPoint) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("(SmartAnimalAspect-前置通知-Phone&Camera-)" + signature.getName());
+    }
+
+    // 作用域没有实现接口的类
+    @Before(value = "execution(public void Car.run())")
+    public void ok1(JoinPoint joinPoint) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("切面类-ok1方法-" + signature.getName());
+    }
+
+    @After(value = "execution(public void Car.run())")
+    public void ok2(JoinPoint joinPoint) {  // AOP-JoinPoint
+        // 获取目标方法名：run
+        String name = joinPoint.getSignature().getName();
+        // 获取目标方法所属类的类名：com.charlie.spring.aop.aspectj.Car
+        String declaringTypeName = joinPoint.getSignature().getDeclaringTypeName();
+        // 获取目标方法所属类的简单类名：Car
+        String simpleName = joinPoint.getSignature().getDeclaringType().getSimpleName();
+        // 获取目标方法声明类型(public(1), private protected)，以int形式返回
+        int modifiers = joinPoint.getSignature().getModifiers();
+        // 获取传入目标方法的参数，返回一个数组
+        Object[] args = joinPoint.getArgs();
+        // 获取被代理的对象：Car@2772
+        Object target = joinPoint.getTarget();
+        // 获取代理对象自己：com.charlie.spring.aop.aspectj.Car@a8e6492
+        Object aThis = joinPoint.getThis();
+        System.out.println("ok2~");
+    }
+
+}
+```
+
+### AOP-切面优先级问题
