@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--配置bean-->
+    <bean class="com.charlie.spring.aop.homework2.xml.MyCal" id="myCal"/>
+    <!--配置切面类-->
+    <bean class="com.charlie.spring.aop.homework2.xml.MyAspect" id="myAspect"/>
+
+    <aop:config>
+        <aop:pointcut id="myPointCut" expression="execution(* com.charlie.spring.aop.homework2.xml.Cal.*(..))"/>
+        <aop:aspect ref="myAspect">
+            <aop:before method="showBeginLog" pointcut-ref="myPointCut"/>
+            <aop:after-returning method="showSuccessLog" pointcut-ref="myPointCut" returning="result"/>
+        </aop:aspect>
+    </aop:config>
+</beans>

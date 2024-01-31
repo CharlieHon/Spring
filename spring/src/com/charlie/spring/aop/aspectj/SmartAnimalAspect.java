@@ -3,12 +3,14 @@ package com.charlie.spring.aop.aspectj;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.*;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 
 // 切面类，类似于之前写的MyProxyProvider，但是功能强大很多
 @Component  // 会注入到IOC容器
+@Order(value = 2)   // 表示该切面类执行的顺序，value的值越小，优先级越高
 @Aspect     // 标识是一个切面类，底层有切面编程支撑(动态代理+反射+动态绑定)
 public class SmartAnimalAspect {
 
@@ -31,7 +33,7 @@ public class SmartAnimalAspect {
     public void showBeginLog(JoinPoint joinPoint) {
         // 通过链接点对象joinPoint可以获取方法签名，即com.charlie.spring.aop.aspectj.APo.getSum(int, int)
         Signature signature = joinPoint.getSignature();
-        System.out.println("切面类showBeginLog()[使用切入点表达式重用]-方法执行前-日志-方法名-" + signature.getName() + "-参数-" +
+        System.out.println("SmartAnimalAspect切面类showBeginLog()[使用切入点表达式重用]-方法执行前-日志-方法名-" + signature.getName() + "-参数-" +
                 Arrays.toString(joinPoint.getArgs()));
     }
 
@@ -45,7 +47,7 @@ public class SmartAnimalAspect {
     @AfterReturning(value = "myPointCut()", returning = "res")
     public void showSuccessEndLog(JoinPoint joinPoint, Object res) {
         Signature signature = joinPoint.getSignature();
-        System.out.println("切面类showSuccessEndLog()-方法执行正常结束-日志-方法名-" + signature.getName()
+        System.out.println("SmartAnimalAspect切面类showSuccessEndLog()-方法执行正常结束-日志-方法名-" + signature.getName()
                 + "-返回结果=" + res);
     }
 
@@ -55,7 +57,7 @@ public class SmartAnimalAspect {
     @AfterThrowing(value = "myPointCut()", throwing = "throwable")
     public void showExceptionLog(JoinPoint joinPoint, Throwable throwable) {
         Signature signature = joinPoint.getSignature();
-        System.out.println("切面类showExceptionLog()-方法执行异常-日志-方法名-" + signature.getName() + "-异常信息=" + throwable);
+        System.out.println("SmartAnimalAspect切面类showExceptionLog()-方法执行异常-日志-方法名-" + signature.getName() + "-异常信息=" + throwable);
     }
 
     // 最终通知：把showFinallyEndLog方法切入到目标方法执行后，不管是否发生异常，都要执行 finally{}块
@@ -63,7 +65,7 @@ public class SmartAnimalAspect {
     @After(value = "myPointCut()")
     public void showFinallyEndLog(JoinPoint joinPoint) {
         Signature signature = joinPoint.getSignature();
-        System.out.println("切面类showFinallyEndLog()-方法执行异常-日志-方法名-" + signature.getName());
+        System.out.println("SmartAnimalAspect切面类showFinallyEndLog()-方法执行异常-日志-方法名-" + signature.getName());
     }
 
     // 新的前置通知

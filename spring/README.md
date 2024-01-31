@@ -1823,3 +1823,82 @@ public class SmartAnimalAspect {
 ```
 
 ### AOP-切面优先级问题
+
+- 基本语法：`@Order(value = n)`，n值越小，优先级越高；默认值为 `Integer.MAX_VALUE`
+- ![切面优先级](img_44.png)
+
+### 基于XML配置AOP
+
+```java
+package com.charlie.spring.aop.xml;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.Signature;
+
+import java.util.Arrays;
+
+// 这是一个基于xml配置的切面类
+public class SmartAnimalAspect {
+
+    public void showBeginLog(JoinPoint joinPoint) {
+        // 通过链接点对象joinPoint可以获取方法签名，即com.charlie.spring.aop.aspectj.APo.getSum(int, int)
+        Signature signature = joinPoint.getSignature();
+        System.out.println("基于xml-showBeginLog()[使用切入点表达式重用]-方法执行前-日志-方法名-" + signature.getName() + "-参数-" +
+                Arrays.toString(joinPoint.getArgs()));
+    }
+
+    public void showSuccessEndLog(JoinPoint joinPoint, Object res) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("基于xml-showSuccessEndLog()-方法执行正常结束-日志-方法名-" + signature.getName()
+                + "-返回结果=" + res);
+    }
+
+    public void showExceptionLog(JoinPoint joinPoint, Throwable throwable) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("基于xml-showExceptionLog()-方法执行异常-日志-方法名-" + signature.getName() + "-异常信息=" + throwable);
+    }
+
+    public void showFinallyEndLog(JoinPoint joinPoint) {
+        Signature signature = joinPoint.getSignature();
+        System.out.println("基于xml-showFinallyEndLog()-方法执行异常-日志-方法名-" + signature.getName());
+    }
+}
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--使用xml配置，完成AOP编程-->
+    <!--配置一个切面类对象-bean-->
+    <bean class="com.charlie.spring.aop.xml.SmartAnimalAspect" id="smartAnimalAspect"/>
+    <!--配置一个APo对象-->
+    <bean class="com.charlie.spring.aop.xml.APo" id="aPo"/>
+    <!--配置切面类-->
+    <aop:config>
+        <!--1. 先配置切入点-->
+        <aop:pointcut id="myPointCut" expression="execution(public int com.charlie.spring.aop.xml.APo.getSum(int, int))"/>
+        <!--2. 再指定切面类对象-->
+        <aop:aspect ref="smartAnimalAspect" order="10">
+            <!--配置前置通知-->
+            <aop:before method="showBeginLog" pointcut-ref="myPointCut"/>
+            <!--返回通知-->
+            <aop:after-returning method="showSuccessEndLog" pointcut-ref="myPointCut" returning="res"/>
+            <!--异常通知-->
+            <aop:after-throwing method="showExceptionLog" pointcut-ref="myPointCut" throwing="throwable"/>
+            <!--最终通知-->
+            <aop:after method="showFinallyEndLog" pointcut-ref="myPointCut"/>
+            <!--配置环绕通知-->
+            <!--<aop:around method=""/>-->
+        </aop:aspect>
+    </aop:config>
+</beans>
+```
+
+### 课后作业
+
+- ![作业要求](img_45.png)
+- [基于注解方式](src/com/charlie/spring/aop/homework2/MyAspect.java)
+- [基于xml配置方式](src/beans11.xml)
