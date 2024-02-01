@@ -1,12 +1,14 @@
 package com.charlie.spring.ioc;
 
 
+import com.charlie.spring.annotation.Autowired;
 import com.charlie.spring.annotation.Component;
 import com.charlie.spring.annotation.ComponentScan;
 import com.charlie.spring.annotation.Scope;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.concurrent.ConcurrentHashMap;
@@ -107,6 +109,20 @@ public class MySpringApplicationContext {
         // 使用反射得到实例
         try {
             Object instance = clazz.getDeclaredConstructor().newInstance();
+            // 分析：这里会加入依赖注入的业务逻辑
+            // 1. 遍历当前要创建的对象的所有字段，找到需要依赖注入的字段
+            for (Field declaredField : clazz.getDeclaredFields()) {
+                // 2. 判断该字段是否有 @Autowired 修饰
+                if (declaredField.isAnnotationPresent(Autowired.class)) {
+                    // 3. 得到字段的名字，因为需要过名字进行装配
+                    String name = declaredField.getName();
+                    // 4. 通过getBean方法来获取要组装的对象
+                    Object bean = getBean(name);
+                    // 5. 进行组装，通过反射进行set
+                    declaredField.setAccessible(true);  // 因为属性(private MonsterDAO monsterDAO)是私有的，所以需要进行爆破
+                    declaredField.set(instance, bean);
+                }
+            }
             return instance;
         } catch (Exception e) {
             e.printStackTrace();
