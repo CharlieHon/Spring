@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--配置自动扫描的包，同时引入对应的名称空间
+    1. 如果是普通的java项目，beans.xml 文件放在src下
+    2. 如果是 java maven 项目，beans.xml 文件放在 src/main/resources
+    -->
+    <context:component-scan base-package="com.charlie.spring.component"/>
+
+    <!--配置后置处理器 BeanPostProcessor-->
+    <bean class="com.charlie.spring.process.MyBeanPostProcessor" id="myBeanPostProcessor"/>
+    <!--或者使用直接 @Component 注意扫描的包路径要包含后置处理器-->
+    <!--<context:component-scan base-package="com.charlie.spring.process"/>-->
+
+    <context:component-scan base-package="com.charlie.spring.aop"/>
+    <aop:aspectj-autoproxy/>
+</beans>
