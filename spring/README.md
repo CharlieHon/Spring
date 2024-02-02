@@ -1902,3 +1902,269 @@ public class SmartAnimalAspect {
 - ![作业要求](img_45.png)
 - [基于注解方式](src/com/charlie/spring/aop/homework2/MyAspect.java)
 - [基于xml配置方式](src/beans11.xml)
+
+## JdbcTemplate
+
+### JdbcTemplate基本介绍
+
+1. 通过Spring可以配置数据源，从而完成对数据表的操作
+2. `JdbcTemplate`是Spring提供的访问数据库的技术，可以将JDBC的常用操作封装为模板方法
+3. ![img_46.png](img_46.png)
+
+### JdbcTemplate使用实例
+
+1. ![引入需要的jar包](img_47.png)
+2. 创建操作的数据库和表
+
+```mysql
+# 创建Spring中使用的数据库
+CREATE DATABASE IF NOT EXISTS spring;
+USE spring;
+-- 创建表monster
+CREATE TABLE monster (
+	id INT PRIMARY KEY,
+	`name` VARCHAR(64) NOT NULL DEFAULT '',
+	skill VARCHAR(64) NOT NULL DEFAULT ''
+) CHARSET=utf8;
+INSERT INTO monster VALUES(100, '青牛怪', '乾坤圈'), 
+	(200, '黄袍怪', '沙尘暴'), 
+	(300, '蜘蛛怪', '蜘蛛丝');
+SELECT * FROM monster;
+```
+
+3. 创建配置文件 `src/jdbc.properties`
+```properties
+jdbc.user=root
+jdbc.pwd=hsp
+jdbc.driver=com.mysql.jdbc.Driver
+jdbc.url=jdbc:mysql://localhost:3306/spring
+```
+4. 创建配置文件 `src/JdbcTemplate_ioc.xml`
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--使用文件配置bean-->
+    <!--引入外部的jdbc.properties-->
+    <context:property-placeholder location="classpath:jdbc.properties"/>
+    <!--配置数据源对象-DataSource-->
+    <bean class="com.mchange.v2.c3p0.ComboPooledDataSource" id="dataSource">
+        <!--给数据源对象配置属性值-->
+        <property name="user" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.pwd}"/>
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+    </bean>
+
+    <!--配置JdbcTemplate对象-->
+    <bean class="org.springframework.jdbc.core.JdbcTemplate" id="jdbcTemplate">
+        <!--给JdbcTemplate对象配置dataSource-->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+</beans>
+```
+
+```java
+package com.charlie.spring.test;
+
+import com.charlie.spring.bean.Monster;
+import com.charlie.spring.jdbctemplate.dao.MonsterDAO;
+import org.junit.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class JdbcTemplateTest {
+    // 测试JdbcTemplate数据库连接
+    @Test
+    public void testDataSourceByJdbcTemplate() throws SQLException {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        // 因为 com.mchange.v2.c3p0.ComboPooledDataSource 类型实现了 DataSource 接口
+        DataSource dataSource = ioc.getBean("dataSource", DataSource.class);
+        Connection connection = dataSource.getConnection();
+        // 获取到connection=com.mchange.v2.c3p0.impl.NewProxyConnection@124c278f
+        System.out.println("获取到connection=" + connection);
+        connection.close();
+        System.out.println("OK!");
+    }
+
+    // 测试通过JdbcTemplate对象完成添加数据-jdbcTemplate.update
+    @Test
+    public void addDataByJdbcTemplate() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        // 获取JdbcTemplate对象
+        JdbcTemplate jdbcTemplate = ioc.getBean(JdbcTemplate.class);
+        // 1. 添加方式1
+        //String sql = "insert into monster values(400, '红孩儿', '三昧真火')";
+        //jdbcTemplate.execute(sql);
+        // 2. 添加方式2
+        String sql = "insert into monster values(?, ?, ?)";
+        // 返回表受影响的行数，添加成功返回1
+        int affected = jdbcTemplate.update(sql, 700, "牛魔王", "芭蕉扇");
+        System.out.println("add OK, affected=" + affected);
+    }
+
+    // 修改数据-jdbcTemplate.update
+    @Test
+    public void updateDataByJdbcTemplate() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        // 获取JdbcTemplate对象
+        JdbcTemplate jdbcTemplate = ioc.getBean(JdbcTemplate.class);
+        // SQL语句
+        String sql = "update monster set skill=? where id=?";
+        int update = jdbcTemplate.update(sql, "美人计", 300);
+        System.out.println("update=" + update);
+    }
+
+    // 批量添加数据-jdbcTemplate.batchUpdate
+    @Test
+    public void addBatchByJdbcTemplate() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        // 获取JdbcTemplate对象
+        JdbcTemplate jdbcTemplate = ioc.getBean(JdbcTemplate.class);
+        // 1. 确定API，更新->update->batchUpdate
+        // public int[] batchUpdate(String sql, List<Object[]> batchArgs)
+        // 2. 准备参数
+        String sql = "insert into monster values(?, ?, ?)";
+        List<Object[]> batchArgs = new ArrayList<>();
+        batchArgs.add(new Object[]{600, "老鼠精", "旋风钻"});
+        batchArgs.add(new Object[]{500, "黑熊精", "偷袈裟"});
+        // 3. 调用
+        // 说明：返回结果是一个数组，每个元素对应上面sql语句对表的影响行数
+        int[] ints = jdbcTemplate.batchUpdate(sql, batchArgs);
+        for (int anInt : ints) {
+            System.out.println("anInt=" + anInt);
+        }
+        System.out.println("批量添加成功~");
+    }
+
+    // 查询id=100的monster，并封装到Monster实体对象【实际开发中，非常有用】
+    // - jdbcTemplate.queryForObject
+    @Test
+    public void query1() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        JdbcTemplate jdbcTemplate = ioc.getBean(JdbcTemplate.class);
+        // 1. 确定API：queryForObject()
+        // public <T> T queryForObject(String sql, RowMapper<T> rowMapper)
+        // 2. 准备参数
+        // 数据库中字段与封装字段的不一样，需要使用别名，否则会报错
+        String sql = "SELECT id AS monsterId, `name`, skill FROM monster WHERE id=100";
+        // 使用 RowMapper接口来对返回的数据进行封装->底层使用的是反射+setter
+        // 注意：查询记录表的字段需要和Monster对象的字段名保持一致！
+        RowMapper<Monster> rowMapper = new BeanPropertyRowMapper<>(Monster.class);
+        Monster monster = jdbcTemplate.queryForObject(sql, rowMapper);
+        System.out.println("monster=" + monster);
+    }
+
+    // 查询id>=200的monster的，并封装到monster的实例对象
+    @Test
+    public void query2() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        JdbcTemplate jdbcTemplate = ioc.getBean(JdbcTemplate.class);
+        // 1. API-> query
+        // public <T> List<T> query(String sql, RowMapper<T> rowMapper, @Nullable Object... args)
+        String sql = "SELECT id AS monsterId, `name`, skill FROM monster WHERE id>=?";
+        RowMapper<Monster> rowMapper = new BeanPropertyRowMapper<>(Monster.class);
+        List<Monster> monsterList = jdbcTemplate.query(sql, rowMapper, 300);
+        for (Monster monster : monsterList) {
+            System.out.println("monster=" + monster);
+        }
+    }
+
+    // 查询返回结果只有一行一列的值，比如查询id=100的妖怪名
+    // -jdbcTemplate.queryForObject
+    @Test
+    public void query3() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        JdbcTemplate jdbcTemplate = ioc.getBean(JdbcTemplate.class);
+        // 确定API->queryForObject
+        // public <T> T queryForObject(String sql, Class<T> requiredType)
+        String sql = "select `name` from monster where id=?";
+        String monsterName = jdbcTemplate.queryForObject(sql, String.class, 100);
+        System.out.println("monsterName=" + monsterName);   // 青牛怪
+    }
+
+    // 使用Map传入具名参数-namedParameterJdbcTemplate.update
+    @Test
+    public void testDataByNamedParameterJdbcTemplate() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        // 得到NamedParameterJdbcTemplate bean
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ioc.getBean(NamedParameterJdbcTemplate.class);
+        // 1. 确定API
+        // public int update(String sql, Map<String, ?> paramMap)
+        // 2. 准备参数 [:my_id, :name, :skill] 要求按照规定的名字来设置参数
+        String sql = "insert into monster values (:id, :name, :skill)";
+        Map<String, Object> paramMap = new HashMap<>();
+        paramMap.put("id", 800);
+        paramMap.put("name", "银角大王");
+        paramMap.put("skill", "玉净瓶");
+        int update = namedParameterJdbcTemplate.update(sql, paramMap);
+        System.out.println("update=" + update);
+    }
+
+    // 使用sqlparametersource
+    @Test
+    public void testDataBySqlParameterSource() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        NamedParameterJdbcTemplate namedParameterJdbcTemplate = ioc.getBean(NamedParameterJdbcTemplate.class);
+        // 1. 确定API
+        // public int update(String sql, SqlParameterSource paramSource)
+        // public BeanPropertySqlParameterSource(Object object)
+        // 注意：这里的id，需要改为 :monsterId，因为底层是通过getter方法获取字段值的
+        String sql = "insert into monster values (:monsterId, :name, :skill)";
+        Monster monster = new Monster(900, "金角大王", "大葫芦");
+        BeanPropertySqlParameterSource sqlParameterSource = new BeanPropertySqlParameterSource(monster);
+        int update = namedParameterJdbcTemplate.update(sql, sqlParameterSource);
+        System.out.println("update=" + update);
+    }
+
+    // 测试 MonsterDAO 依赖注入 JdbcTemplate jdbcTemplate
+    @Test
+    public void monsterDAO() {
+        ApplicationContext ioc = new ClassPathXmlApplicationContext("JdbcTemplate_ioc.xml");
+        MonsterDAO monsterDAO = ioc.getBean("monsterDAO", MonsterDAO.class);
+        Monster monster = new Monster(1000, "大鹏", "神通广大");
+        monsterDAO.save(monster);
+        System.out.println("Finish!");
+    }
+}
+```
+
+```java
+package com.charlie.spring.jdbctemplate.dao;
+
+import com.charlie.spring.bean.Monster;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import javax.annotation.Resource;
+
+@Repository // 将MonsterDAO注入到Spring容器
+public class MonsterDAO {
+    // 注入一个属性
+    @Resource
+    private JdbcTemplate jdbcTemplate;
+
+    // 完成保存任务
+    public void save(Monster monster) {
+        String sql = "insert into monster values(?, ?, ?)";
+        int update = jdbcTemplate.update(sql, monster.getMonsterId(), monster.getName(), monster.getSkill());
+        System.out.println("update=" + update);
+    }
+}
+```
