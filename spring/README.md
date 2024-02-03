@@ -2168,3 +2168,226 @@ public class MonsterDAO {
     }
 }
 ```
+
+## 声明式事务
+
+### 事务分类
+
+1. 编程式事务
+2. 声明式事务
+
+```
+// 编程式事务：示意代码，传统方式
+Connnection connnection = JdbcUtils.getConnection();
+try {
+// 1. 设置事务不要自动提交
+connnection.setAutoCommit(false);
+// 2. 进行各种crud
+// 多个表的修改，添加，删除
+// 3. 提交
+connection.commit();
+} catch(Exception e) {
+// 4. 回滚
+connection.rollback();
+}
+```
+
+### 声明式事务实例
+
+| ![img_48.png](img_48.png) | ![img_49.png](img_49.png) | ![img_50.png](img_50.png) |
+|---------------------------|---------------------------|---------------------------|
+
+```mysql
+# 声明式事务
+-- 创建用户表
+CREATE TABLE `user_account` (
+	user_id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+	user_name VARCHAR(32) NOT NULL DEFAULT '',
+	money DOUBLE NOT NULL DEFAULT 0.0
+)CHARSET=utf8;
+INSERT INTO `user_account` VALUES (NULL, '张三', 1000);
+INSERT INTO `user_account` VALUES (NULL, '李四', 2000);
+SELECT * FROM user_account;
+
+-- 创建商品表
+CREATE TABLE `goods` (
+	goods_id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+	goods_name VARCHAR(32) NOT NULL DEFAULT '',
+	price DOUBLE NOT NULL DEFAULT 0.0
+)CHARSET=utf8;
+INSERT INTO `goods` VALUES (NULL, '小风扇', 10.00);
+INSERT INTO `goods` VALUES (NULL, '小台灯', 16.00);
+INSERT INTO `goods` VALUES (NULL, '可口可乐', 3.00);
+SELECT * FROM goods;
+
+-- 创建商品库存表
+CREATE TABLE `goods_amount` (
+	goods_id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+	goods_num INT UNSIGNED DEFAULT 0
+)CHARSET=utf8;
+INSERT INTO goods_amount VALUES(1, 200);
+INSERT INTO goods_amount VALUES(2, 20);
+INSERT INTO goods_amount VALUES(3, 15);
+SELECT * FROM goods_amount;
+```
+
+```java
+package com.charlie.spring.tx.dao;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import javax.annotation.Resource;
+
+@Repository // 将GoodsDAO对象注入到Spring容器
+public class GoodsDAO {
+    @Resource
+    private JdbcTemplate jdbcTemplate;
+
+    // 根据商品goods_id，查询其价格
+    public float queryPriceById(Integer id) {
+        String sql = "select price from goods where goods_id=?";
+        Float price = jdbcTemplate.queryForObject(sql, Float.class, id);
+        return price;
+    }
+
+    // 根据用户user_id，修改其余额
+    public void updateBalance(Integer user_id, Float money) {
+        String sql = "update user_account set money=money-? where user_id=?";
+        jdbcTemplate.update(sql, money, user_id);
+    }
+
+    // 根据商品goods_id，更新商品数量
+    public void updateAmount(Integer goods_id, Integer amount) {
+        String sql = "update goods_amount set goods_num=goods_num-? where goods_id=?";
+        jdbcTemplate.update(sql, amount, goods_id);
+    }
+}
+```
+
+| ![img_51.png](img_51.png) | ![img_52.png](img_52.png) | ![img_53.png](img_53.png) |
+|---------------------------|---------------------------|---------------------------|
+
+```java
+package com.charlie.spring.tx.service;
+
+import com.charlie.spring.tx.dao.GoodsDAO;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Resource;
+
+@Service    // 将GoodsService对象注入到Spring容器
+public class GoodsService {
+    // 定义属性GoodsDAO
+    @Resource
+    private GoodsDAO goodsDAO;
+
+    /**
+     * 编写一个方法，完成用户购买商品的业务
+     *
+     * @param userId  用户id
+     * @param goodsId 商品id
+     * @param amount  商品数量
+     */
+    public void buyGoods(int userId, int goodsId, int amount) {
+        System.out.println("用户购买信息：userId" + userId + " goodsId=" + goodsId
+                + " 购买数量=" + amount);
+        // 1. 得到商品数量
+        float price = goodsDAO.queryPriceById(goodsId);
+        // 2. 减少用户的余额
+        goodsDAO.updateBalance(userId, price * amount);
+        // 3. 减少库存量
+        goodsDAO.updateAmount(goodsId, amount);
+        System.out.println("用户购买成功！");
+    }
+
+    /* @Transactional 注解说明
+    1. 使用 @Transactional 可以进行声明式事务控制
+    2. 即将标识的方法 buyGoodsByTx 中，对数据库的操作视为一个 事务 管理
+    3. @Transactional 底层使用的仍然是AOP机制
+    4. 底层是使用动态代理对象来调用buyGoodsByTx
+    5. 在执行 buyGoodsByTx 之前，先调用 事务管理器的 doBegin()，再调用 buyGoodsByTx
+        如果没有发生异常，则调用 事务管理器的 doCommit()，如果发生异常，则调用其 doRollBack()方法
+     */
+    @Transactional
+    public void buyGoodsByTx(int userId, int goodsId, int amount) {
+        System.out.println("用户购买信息：userId" + userId + " goodsId=" + goodsId
+                + " 购买数量=" + amount);
+        // 1. 得到商品数量
+        float price = goodsDAO.queryPriceById(goodsId);
+        // 2. 减少用户的余额
+        goodsDAO.updateBalance(userId, price * amount);
+        // 3. 减少库存量
+        goodsDAO.updateAmount(goodsId, amount);
+        System.out.println("用户购买成功！");
+    }
+}
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--配置要扫描的包-->
+    <context:component-scan base-package="com.charlie.spring.tx.dao"/>
+    <context:component-scan base-package="com.charlie.spring.tx.service"/>
+
+    <!--引入外部的jdbc.properties-->
+    <context:property-placeholder location="classpath:jdbc.properties"/>
+    <!--配置数据源对象-DataSource-->
+    <bean class="com.mchange.v2.c3p0.ComboPooledDataSource" id="dataSource">
+        <!--给数据源对象配置属性值-->
+        <property name="user" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.pwd}"/>
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+    </bean>
+    <!--配置JdbcTemplate对象-->
+    <bean class="org.springframework.jdbc.core.JdbcTemplate" id="jdbcTemplate">
+        <!--给JdbcTemplate对象配置dataSource-->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+
+    <!--配置事务管里器：进行声明式事务管里需要配置一个事务管里对象，并设置dataSource属性
+    1. DataSourceTransactionManager 这个对象是进行事务管理的
+    2. 需要配置数据源属性，这样才能指定该事务管理器是对哪个数据源进行事务控制
+    -->
+    <bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager" id="dataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    <!--启用基于注解的声明式事务管里功能-->
+    <tx:annotation-driven transaction-manager="dataSourceTransactionManager"/>
+</beans>
+```
+
+### 事务传播机制种类
+
+1. 当有多个事务处理并存时，如何控制？
+2. ![事务的传播机制](img_54.png)
+3. ![事务传播机制种类](img_55.png)
+4. `@Transactional(propagation = Propagation.REQUIRED)` 是默认事务传播机制
+   - ![img_56.png](img_56.png)
+   - 将方法内的多个事务事务看成一个整体事务，其中任何一个出现异常，都会回滚
+5. `@Transactional(propagation = Propagation.REQUIRES_NEW)`
+    - ![img_57.png](img_57.png)
+    - 该属性将方法各个事务都作为一个独立的事务处理，其中一个出现异常仅会回滚该方法的操作，不会对象其它事务产生影响
+6. ![img_58.png](img_58.png)
+7. [事务传播机制实例](src/com/charlie/spring/tx/service/MultiplyService.java)
+
+### 事务隔离级别
+
+1. ![事务隔离级别](img_59.png)
+2. 默认的隔离级别，即mysql数据库默认的隔离级别一般为 `REPEATABLE_READ`，可以通过 `SELECT @@global.tx_isolation;` 语句查看
+3. 可以通过 `@Transactional(isolation = Isolation.READ_COMMITTED)` 修改事务的隔离级别
+4. ![img_60.png](img_60.png)
+
+### 事务的超时回滚
+
+1. 如果一个事务执行的事件超过某个事件限制，就让该事务回滚
+2. 可以通过设置事务超时回滚来实现，即 `@Transactional(timeout = 2)` ，默认单位为秒
+3. [示例代码](src/com/charlie/spring/tx/service/GoodsService.java)
